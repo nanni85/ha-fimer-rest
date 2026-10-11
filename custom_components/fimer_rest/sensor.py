@@ -1,4 +1,4 @@
-"""Sensori per FIMER UNO-DM."""
+"""Sensori per FIMER UNO-DM con supporto stringhe avanzato e dispersioni."""
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
@@ -22,7 +22,7 @@ from .const import DOMAIN
 from .coordinator import FimerDataCoordinator
 
 SENSOR_DESCRIPTIONS: tuple[SensorEntityDescription, ...] = (
-    # Potenze e Produzione Giornaliera / Totale
+    # Potenze Istantanee e Rendimento
     SensorEntityDescription(
         key="Pgrid",
         name="Potenza AC Attuale",
@@ -33,6 +33,20 @@ SENSOR_DESCRIPTIONS: tuple[SensorEntityDescription, ...] = (
     SensorEntityDescription(
         key="Pin",
         name="Potenza DC Totale",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    SensorEntityDescription(
+        key="Pin1",
+        name="Potenza Stringa 1",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    SensorEntityDescription(
+        key="Pin2",
+        name="Potenza Stringa 2",
         native_unit_of_measurement=UnitOfPower.WATT,
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
@@ -51,9 +65,18 @@ SENSOR_DESCRIPTIONS: tuple[SensorEntityDescription, ...] = (
         icon="mdi:percent",
         state_class=SensorStateClass.MEASUREMENT,
     ),
+
+    # Statistiche di Produzione (Oggi, Anno, Totale e Periodi)
     SensorEntityDescription(
         key="E0_runtime",
         name="Produzione Oggi",
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+    ),
+    SensorEntityDescription(
+        key="E0_Year",
+        name="Produzione Anno Corrente",
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
@@ -65,7 +88,6 @@ SENSOR_DESCRIPTIONS: tuple[SensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
     ),
-    # Statistiche di Periodo
     SensorEntityDescription(
         key="E0_7D",
         name="Produzione Ultimi 7 Giorni",
@@ -80,7 +102,22 @@ SENSOR_DESCRIPTIONS: tuple[SensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
     ),
-    # Stringhe MPPT
+    SensorEntityDescription(
+        key="E_String1_Tot",
+        name="Produzione Totale Stringa 1",
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+    ),
+    SensorEntityDescription(
+        key="E_String2_Tot",
+        name="Produzione Totale Stringa 2",
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+    ),
+
+    # Dati Canali MPPT (Tensioni e Correnti)
     SensorEntityDescription(
         key="Vin1",
         name="Tensione Stringa 1",
@@ -109,6 +146,7 @@ SENSOR_DESCRIPTIONS: tuple[SensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
     ),
+
     # Rete Elettrica AC
     SensorEntityDescription(
         key="Vgrid",
@@ -124,10 +162,18 @@ SENSOR_DESCRIPTIONS: tuple[SensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.FREQUENCY,
         state_class=SensorStateClass.MEASUREMENT,
     ),
-    # Diagnostica, Temperature, Ventola e Isolamento
+
+    # Diagnostica, Isolamento e Temperature
     SensorEntityDescription(
         key="TempInv",
         name="Temperatura Inverter",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    SensorEntityDescription(
+        key="TempBooster",
+        name="Temperatura Stadio Booster",
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -137,6 +183,13 @@ SENSOR_DESCRIPTIONS: tuple[SensorEntityDescription, ...] = (
         name="Resistenza di Isolamento",
         native_unit_of_measurement="MΩ",
         icon="mdi:shield-check",
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    SensorEntityDescription(
+        key="Ileak",
+        name="Corrente Dispersione a Terra",
+        native_unit_of_measurement="mA",
+        icon="mdi:flash-alert",
         state_class=SensorStateClass.MEASUREMENT,
     ),
     SensorEntityDescription(
@@ -187,21 +240,58 @@ class FimerSensor(CoordinatorEntity, SensorEntity):
         if not self.coordinator.data:
             return None
 
-        # Calcolo efficienza percentuale: (Pgrid / Pin) * 100
+        # 1. Efficienza (%)
         if self.entity_description.key == "efficiency":
             pgrid = self.coordinator.data.get("Pgrid")
             pin = self.coordinator.data.get("Pin")
             if pin is not None and pin > 10 and pgrid is not None and pgrid > 0:
-                eff = (pgrid / pin) * 100.0
-                return round(min(eff, 100.0), 1)
+                return round(min((pgrid / pin) * 100.0, 100.0), 1)
             return 0.0
 
+        # 2. Potenza Watt MPPT 1 (diretta o calcolata V x I)
+        if self.entity_description.key == "Pin1":
+            p1 = self.coordinator.data.get("Pin1")
+            if p1 is not None:
+                return round(float(p1), 1)
+            v1 = self.coordinator.data.get("Vin1", 0)
+            i1 = self.coordinator.data.get("Iin1", 0)
+            return round(float(v1) * float(i1), 1)
+
+        # 3. Potenza Watt MPPT 2 (diretta o calcolata V x I)
+        if self.entity_description.key == "Pin2":
+            p2 = self.coordinator.data.get("Pin2")
+            if p2 is not None:
+                return round(float(p2), 1)
+            v2 = self.coordinator.data.get("Vin2", 0)
+            i2 = self.coordinator.data.get("Iin2", 0)
+            return round(float(v2) * float(i2), 1)
+
+        # 4. Corrente di dispersione (mA)
+        if self.entity_description.key == "Ileak":
+            ileak = self.coordinator.data.get("Ileak") or self.coordinator.data.get("IleakDC")
+            if ileak is not None:
+                # Se è già in mA lo tiene tale, altrimenti se espresso in A lo converte moltiplicando per 1000
+                val = float(ileak)
+                return round(val if val > 0.5 else val * 1000.0, 1)
+            return None
+
+        # 5. Totalizzatori per singola stringa (Wh -> kWh)
+        if self.entity_description.key == "E_String1_Tot":
+            val = self.coordinator.data.get("E_String1") or self.coordinator.data.get("EIn1")
+            return round(float(val) / 1000.0, 2) if val is not None else None
+
+        if self.entity_description.key == "E_String2_Tot":
+            val = self.coordinator.data.get("E_String2") or self.coordinator.data.get("EIn2")
+            return round(float(val) / 1000.0, 2) if val is not None else None
+
+        # 6. Altri contatori energetici cumulativi (Wh -> kWh)
+        if self.entity_description.key in ("E0_runtime", "ETotal", "E0_7D", "E0_30D", "E0_Year"):
+            raw_val = self.coordinator.data.get(self.entity_description.key)
+            return round(float(raw_val) / 1000.0, 2) if raw_val is not None else None
+
+        # Sensori standard diretti
         raw_val = self.coordinator.data.get(self.entity_description.key)
         if raw_val is None:
             return None
 
-        # Conversione dei contatori da Wh a kWh
-        if self.entity_description.key in ("E0_runtime", "ETotal", "E0_7D", "E0_30D"):
-            return round(raw_val / 1000.0, 2)
-
-        return round(raw_val, 2)
+        return round(float(raw_val), 2)
