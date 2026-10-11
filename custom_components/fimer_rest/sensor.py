@@ -1,4 +1,4 @@
-"""Sensori per FIMER UNO-DM con supporto stringhe avanzato e diagnosi isolamento."""
+"""Sensori per FIMER UNO-DM con supporto stringhe avanzato, isolamento e temperature complete."""
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
@@ -142,10 +142,24 @@ SENSOR_DESCRIPTIONS: tuple[SensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
     ),
 
-    # Diagnostica, Isolamento e Temperature
+    # Diagnostica, Isolamento e Tutte le Temperature
     SensorEntityDescription(
         key="TempInv",
         name="Temperatura Inverter",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    SensorEntityDescription(
+        key="TempBst",
+        name="Temperatura Stadio Booster",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    SensorEntityDescription(
+        key="Temp1",
+        name="Temperatura Sistema",
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -238,12 +252,11 @@ class FimerSensor(CoordinatorEntity, SensorEntity):
             i2 = self.coordinator.data.get("Iin2", 0)
             return round(float(v2) * float(i2), 1)
 
-        # 4. Corrente di Dispersione (mA con normalizzazione microampere)
+        # 4. Corrente di Dispersione (mA)
         if self.entity_description.key == "Ileak":
             val = self.coordinator.data.get("Ileak") or self.coordinator.data.get("IleakDC")
             if val is not None:
                 f_val = float(val)
-                # Se il valore grezzo è > 100 è espresso in µA (es. 5981 µA -> 6.0 mA)
                 if f_val > 100:
                     return round(f_val / 1000.0, 1)
                 return round(f_val, 1)
@@ -254,9 +267,9 @@ class FimerSensor(CoordinatorEntity, SensorEntity):
             raw_val = self.coordinator.data.get(self.entity_description.key)
             return round(float(raw_val) / 1000.0, 2) if raw_val is not None else None
 
-        # 6. Tutti gli altri valori diretti
+        # 6. Temperature e altri valori diretti
         raw_val = self.coordinator.data.get(self.entity_description.key)
         if raw_val is None:
             return None
 
-        return round(float(raw_val), 2)
+        return round(float(raw_val), 1 if "Temp" in self.entity_description.key else 2)
