@@ -1,0 +1,11 @@
+{
+  "domain": "fimer_rest",
+  "name": "FIMER / ABB UNO-DM Local",
+  "codeowners": ["@nanni85"],
+  "config_flow": true,
+  "documentation": "https://github.com/nanni85/ha-fimer-rest",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/nanni85/ha-fimer-rest/issues",
+  "requirements": [],
+  "version": "1.0.0"
+}
