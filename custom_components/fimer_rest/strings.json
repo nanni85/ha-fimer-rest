@@ -1,0 +1,20 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connessione FIMER UNO-DM",
+        "description": "Inserisci l'indirizzo IP e le credenziali di accesso locale del tuo inverter.",
+        "data": {
+          "host": "Indirizzo IP dell'inverter",
+          "username": "Nome utente (es. admin o nanni85)",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Impossibile raggiungere l'inverter. Verifica l'IP.",
+      "invalid_auth": "Credenziali errate (401 Authorization Required).",
+      "unknown": "Errore inatteso durante la connessione."
+    }
+  }
+}
