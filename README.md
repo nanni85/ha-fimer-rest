@@ -45,9 +45,10 @@ Questa integrazione comunica direttamente in rete locale (LAN) con l'inverter, s
 | **Resistenza di Isolamento** | MΩ | Resistenza di isolamento verso terra |
 | **Corrente Dispersione a Terra**| mA | Corrente differenziale di fuga |
 | **Velocità Ventola** | RPM | Giri al minuto della ventola di raffreddamento |
-| **Stato Ventola** | On/Off | Stato operativo della ventola |
-| **Stato Allarme / Connessione** | Testo | Diagnostica di funzionamento |
-
+| **Stato Ventola** | On/Off | Stato operativo della ventola (in marcia o ferma) |
+| **Stato Operativo Inverter** | Testo | Ciclo operativo (In Produzione, Sleep Notturno, Sincronizzazione, ecc.) |
+| **Stato Allarme Inverter** | Testo | Notifica dinamica allarmi/warning proprietari FIMER (es. `W002 - Input UV`, `W010 - Fan fault`, `Nessun Allarme`) |
+| **Stato Connessione** | Testo | Stato raggiungibilità LAN dell'inverter |
 ---
 
 ## Installazione
