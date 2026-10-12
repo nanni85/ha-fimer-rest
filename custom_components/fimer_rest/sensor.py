@@ -210,7 +210,7 @@ SENSOR_DESCRIPTIONS: tuple[SensorEntityDescription, ...] = (
 
     # Diagnostica Operativa e Allarmi
     SensorEntityDescription(
-        key="GlobalState",
+        key="GlobState",
         name="Stato Operativo Inverter",
         icon="mdi:solar-power",
     ),
@@ -303,11 +303,13 @@ class FimerSensor(CoordinatorEntity, SensorEntity):
                 raw_val = self.coordinator.data.get("EYear")
             return round(float(raw_val) / 1000.0, 2) if raw_val is not None else None
 
-        # 6. Stato Operativo Inverter (GlobalState)
-        if self.entity_description.key == "GlobalState":
+        # 6. Stato Operativo Inverter (GlobState con fallback)
+        if self.entity_description.key == "GlobState":
             raw_state = (
-                self.coordinator.data.get("GlobalState")
+                self.coordinator.data.get("GlobState")
+                or self.coordinator.data.get("GlobalState")
                 or self.coordinator.data.get("InverterState")
+                or self.coordinator.data.get("InvState")
             )
             if raw_state is None:
                 return "Sconosciuto"
@@ -317,7 +319,7 @@ class FimerSensor(CoordinatorEntity, SensorEntity):
             except (ValueError, TypeError):
                 return str(raw_state)
 
-        # 7. Stato Allarme Inverter (Dinamico e fedele al firmware dell'inverter)
+        # 7. Stato Allarme Inverter (Dinamico)
         if self.entity_description.key == "AlarmState":
             raw_alarm = (
                 self.coordinator.data.get("AlarmState")
