@@ -2,7 +2,7 @@
 
 Integrazione personalizzata per **Home Assistant** per monitorare localmente gli inverter **FIMER / UNO-DM-4.6-TL-PLUS ** tramite le API REST native della scheda Wi-Fi integrata.
 
-Questa integrazione comunica direttamente in rete locale (LAN) con l'inverter, senza dipendere dal cloud Aurora Vision né da bridge esterni.
+Questa integrazione comunica direttamente in rete locale (LAN) con l'inverter, senza dipendere dal cloud.
 
 ---
 
