@@ -1,4 +1,4 @@
-"""Sensori per FIMER UNO-DM con supporto stringhe avanzato, isolamento, temperature e allarmi dinamici."""
+"""Sensori per FIMER UNO-DM con supporto stringhe avanzato, isolamento, temperature, contatori energia e allarmi dinamici."""
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
@@ -81,17 +81,24 @@ SENSOR_DESCRIPTIONS: tuple[SensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
     ),
 
-    # Statistiche di Produzione (Oggi, Totale e Periodi)
+    # Statistiche di Produzione (Lifetime, Anno Corrente, Oggi e Periodi)
     SensorEntityDescription(
-        key="E0_runtime",
-        name="Produzione Oggi",
+        key="ETotal",
+        name="Produzione Totale (Lifetime)",
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
     ),
     SensorEntityDescription(
-        key="ETotal",
-        name="Produzione Totale",
+        key="E0_1Y",
+        name="Produzione Anno Corrente",
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+    ),
+    SensorEntityDescription(
+        key="E0_runtime",
+        name="Produzione Oggi",
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
@@ -290,8 +297,10 @@ class FimerSensor(CoordinatorEntity, SensorEntity):
             return None
 
         # 5. Totalizzatori cumulativi energia (Wh -> kWh)
-        if self.entity_description.key in ("E0_runtime", "ETotal", "E0_7D", "E0_30D"):
+        if self.entity_description.key in ("E0_runtime", "ETotal", "E0_7D", "E0_30D", "E0_1Y"):
             raw_val = self.coordinator.data.get(self.entity_description.key)
+            if raw_val is None and self.entity_description.key == "E0_1Y":
+                raw_val = self.coordinator.data.get("EYear")
             return round(float(raw_val) / 1000.0, 2) if raw_val is not None else None
 
         # 6. Stato Operativo Inverter (GlobalState)
