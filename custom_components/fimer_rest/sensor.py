@@ -1,4 +1,4 @@
-"""Sensori per FIMER UNO-DM con supporto stringhe avanzato, isolamento e temperature complete."""
+"""Sensori per FIMER UNO-DM con supporto stringhe avanzato, isolamento, temperature e allarmi dinamici."""
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
@@ -20,6 +20,21 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import FimerDataCoordinator
+
+# Mappatura stati ciclo-vita globali dell'inverter
+GLOBAL_STATE_MAP = {
+    0: "Inizializzazione",
+    1: "Controllo Isolamento (Alba)",
+    2: "Attesa Irraggiamento Solare",
+    3: "Controllo Rete Elettrica",
+    4: "Sincronizzazione Rete",
+    5: "In Produzione (Run)",
+    6: "In Produzione (Run)",
+    7: "Derating Potenza",
+    8: "Protezione Termica",
+    9: "Standby Notturno (Sleep)",
+    10: "Bloccato per Allarme",
+}
 
 SENSOR_DESCRIPTIONS: tuple[SensorEntityDescription, ...] = (
     # Potenze Istantanee e Rendimento
@@ -142,7 +157,7 @@ SENSOR_DESCRIPTIONS: tuple[SensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
     ),
 
-    # Diagnostica, Isolamento e Tutte le Temperature
+    # Diagnostica, Isolamento e Temperature
     SensorEntityDescription(
         key="TempInv",
         name="Temperatura Inverter",
@@ -184,6 +199,18 @@ SENSOR_DESCRIPTIONS: tuple[SensorEntityDescription, ...] = (
         native_unit_of_measurement="RPM",
         icon="mdi:fan",
         state_class=SensorStateClass.MEASUREMENT,
+    ),
+
+    # Diagnostica Operativa e Allarmi
+    SensorEntityDescription(
+        key="GlobalState",
+        name="Stato Operativo Inverter",
+        icon="mdi:solar-power",
+    ),
+    SensorEntityDescription(
+        key="AlarmState",
+        name="Stato Allarme Inverter",
+        icon="mdi:shield-alert-outline",
     ),
 )
 
@@ -252,7 +279,7 @@ class FimerSensor(CoordinatorEntity, SensorEntity):
             i2 = self.coordinator.data.get("Iin2", 0)
             return round(float(v2) * float(i2), 1)
 
-        # 4. Corrente di Dispersione (mA)
+        # 4. Corrente di Dispersione (mA con normalizzazione microampere)
         if self.entity_description.key == "Ileak":
             val = self.coordinator.data.get("Ileak") or self.coordinator.data.get("IleakDC")
             if val is not None:
@@ -267,7 +294,41 @@ class FimerSensor(CoordinatorEntity, SensorEntity):
             raw_val = self.coordinator.data.get(self.entity_description.key)
             return round(float(raw_val) / 1000.0, 2) if raw_val is not None else None
 
-        # 6. Temperature e altri valori diretti
+        # 6. Stato Operativo Inverter (GlobalState)
+        if self.entity_description.key == "GlobalState":
+            raw_state = (
+                self.coordinator.data.get("GlobalState")
+                or self.coordinator.data.get("InverterState")
+            )
+            if raw_state is None:
+                return "Sconosciuto"
+            try:
+                code = int(float(raw_state))
+                return GLOBAL_STATE_MAP.get(code, f"Stato {code}")
+            except (ValueError, TypeError):
+                return str(raw_state)
+
+        # 7. Stato Allarme Inverter (Dinamico e fedele al firmware dell'inverter)
+        if self.entity_description.key == "AlarmState":
+            raw_alarm = (
+                self.coordinator.data.get("AlarmState")
+                or self.coordinator.data.get("AlarmCode")
+                or self.coordinator.data.get("Alarm")
+                or self.coordinator.data.get("AlarmDesc")
+            )
+            if not raw_alarm or str(raw_alarm).strip() in (
+                "0",
+                "0.0",
+                "None",
+                "No Alarm",
+                "OK",
+                "null",
+            ):
+                return "Nessun Allarme"
+
+            return str(raw_alarm).strip()
+
+        # 8. Temperature e altri valori diretti
         raw_val = self.coordinator.data.get(self.entity_description.key)
         if raw_val is None:
             return None
