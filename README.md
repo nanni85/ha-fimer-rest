@@ -23,33 +23,35 @@ Questa integrazione comunica direttamente in rete locale (LAN) con l'inverter, s
 
 ---
 
-## Sensori Disponibili
+## Tabella Sensori e Mappatura JSON
 
-| Sensore | Unità | Descrizione |
-| :--- | :---: | :--- |
-| **Potenza AC Attuale** | W | Potenza immessa istantaneamente in rete |
-| **Potenza DC Totale** | W | Potenza totale generata dai pannelli solari |
-| **Potenza Stringa 1** | W | Potenza calcolata MPPT 1 ($V_1 \times I_1$) |
-| **Potenza Stringa 2** | W | Potenza calcolata MPPT 2 ($V_2 \times I_2$) |
-| **Picco Potenza Oggi** | W | Valore massimo di potenza raggiunto nella giornata |
-| **Efficienza Conversione** | % | Rendimento istantaneo dell'inverter |
-| **Produzione Oggi** | kWh | Energia prodotta nella giornata corrente (`E0_runtime`) |
-| **Produzione Ultimi 7 Giorni** | kWh | Energia prodotta nell'ultima settimana (`E0_7D`) |
-| **Produzione Ultimi 30 Giorni** | kWh | Energia prodotta nell'ultimo mese (`E0_30D`) |
-| **Produzione Anno Corrente** | kWh | Energia prodotta nell'anno solare in corso (`E0_1Y` / `EYear`) |
-| **Produzione Totale (Lifetime)** | kWh | Contatore cumulativo storico totale di vita (`ETotal`) |
-| **Tensione / Corrente Stringa 1** | V / A | Tensione e corrente sul canale MPPT 1 |
-| **Tensione / Corrente Stringa 2** | V / A | Tensione e corrente sul canale MPPT 2 |
-| **Tensione di Rete** | V | Tensione alternata della rete elettrica (AC) |
-| **Frequenza di Rete** | Hz | Frequenza di rete (50 Hz) |
-| **Temperatura Inverter** | °C | Temperatura del ponte inverter AC (`TempInv`) |
-| **Temperatura Stadio Booster** | °C | Temperatura dello stadio elevatore DC-DC (`TempBst`) |
-| **Temperatura Sistema** | °C | Temperatura interna della scheda di controllo (`Temp1`) |
-| **Resistenza di Isolamento** | MΩ | Resistenza di isolamento verso terra (`Riso`) |
-| **Corrente Dispersione a Terra**| mA | Corrente differenziale di fuga a terra (`Ileak`) |
-| **Velocità Ventola** | RPM | Giri al minuto della ventola di raffreddamento (`Fan1rpm`) |
-| **Stato Operativo Inverter** | Testo | Ciclo operativo (In Produzione, Sleep Notturno, Sincronizzazione, ecc.) |
-| **Stato Allarme Inverter** | Testo | Diagnostica allarmi nativa (es. `W002 - Input UV`, `W010 - Fan fault`, `Nessun Allarme`) |
+| Sensore | Chiave JSON Inverter | Unità | Descrizione |
+| :--- | :---: | :---: | :--- |
+| **Potenza AC Attuale** | `Pgrid` / `PacTogrid` | W | Potenza istantanea immessa in rete |
+| **Potenza DC Totale** | `Pin` | W | Potenza DC complessiva dai moduli fotovoltaici |
+| **Potenza Stringa 1** | `Pin1` *(o $V_1 \times I_1$)* | W | Potenza canale MPPT 1 |
+| **Potenza Stringa 2** | `Pin2` *(o $V_2 \times I_2$)* | W | Potenza canale MPPT 2 |
+| **Picco Potenza Oggi** | `Ppeak` | W | Massimo picco di potenza generato nella giornata |
+| **Efficienza Conversione** | *Calcolato* | % | Rendimento istantaneo di conversione ($P_{\text{grid}} / P_{\text{in}}$) |
+| **Produzione Oggi** | `E0_runtime` | kWh | Energia prodotta nella giornata corrente |
+| **Produzione Ultimi 7 Giorni** | `E0_7D` | kWh | Energia prodotta negli ultimi 7 giorni |
+| **Produzione Ultimi 30 Giorni** | `E0_30D` | kWh | Energia prodotta negli ultimi 30 giorni |
+| **Produzione Anno Corrente** | `E0_1Y` *(o `EYear`)* | kWh | Contatore progressivo dell'anno solare in corso |
+| **Produzione Totale (Lifetime)** | `ETotal` | kWh | Contatore progressivo storico totale di vita dell'inverter |
+| **Tensione Stringa 1** | `Vin1` | V | Tensione continua MPPT 1 |
+| **Corrente Stringa 1** | `Iin1` | A | Corrente continua MPPT 1 |
+| **Tensione Stringa 2** | `Vin2` | V | Tensione continua MPPT 2 |
+| **Corrente Stringa 2** | `Iin2` | A | Corrente continua MPPT 2 |
+| **Tensione di Rete** | `Vgrid` | V | Tensione alternata della rete elettrica (AC) |
+| **Frequenza di Rete** | `Fgrid` | Hz | Frequenza di rete (50 Hz) |
+| **Temperatura Inverter** | `TempInv` | °C | Temperatura stadio finale ponte AC |
+| **Temperatura Stadio Booster** | `TempBst` | °C | Temperatura stadio elevatore DC-DC |
+| **Temperatura Sistema** | `Temp1` | °C | Temperatura interna della scheda di controllo |
+| **Resistenza di Isolamento** | `Riso` | MΩ | Resistenza di isolamento verso terra |
+| **Corrente Dispersione a Terra**| `Ileak` / `IleakDC` | mA | Corrente differenziale di fuga a terra |
+| **Velocità Ventola** | `Fan1rpm` | RPM | Velocità di rotazione della ventola interna |
+| **Stato Operativo Inverter** | `GlobState` | Testo | Stato ciclo operativo (es. *In Produzione (Run)*, *Standby Notturno (Sleep)*) |
+| **Stato Allarme Inverter** | `AlarmState` | Testo | Diagnostica allarmi nativa (es. `W002 - Input UV`, `W010 - Fan fault`, `Nessun Allarme`) |
 
 ---
 
