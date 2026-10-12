@@ -299,4 +299,66 @@ class FimerSensor(CoordinatorEntity, SensorEntity):
             p2 = self.coordinator.data.get("Pin2")
             if p2 is not None:
                 return round(float(p2), 1)
-            v2 = self.coordinator
+            v2 = self.coordinator.data.get("Vin2", 0)
+            i2 = self.coordinator.data.get("Iin2", 0)
+            return round(float(v2) * float(i2), 1)
+
+        # 4. Corrente di Dispersione (mA con normalizzazione microampere)
+        if self.entity_description.key == "Ileak":
+            val = self.coordinator.data.get("Ileak") or self.coordinator.data.get("IleakDC")
+            if val is not None:
+                f_val = float(val)
+                if f_val > 100:
+                    return round(f_val / 1000.0, 1)
+                return round(f_val, 1)
+            return None
+
+        # 5. Totalizzatori cumulativi energia (Wh -> kWh)
+        if self.entity_description.key in ("E0_runtime", "ETotal", "E0_7D", "E0_30D", "E0_1Y", "Ein1", "Ein2"):
+            raw_val = self.coordinator.data.get(self.entity_description.key)
+            if raw_val is None and self.entity_description.key == "E0_1Y":
+                raw_val = self.coordinator.data.get("EYear")
+            return round(float(raw_val) / 1000.0, 2) if raw_val is not None else None
+
+        # 6. Stato Operativo Inverter (GlobState con fallback)
+        if self.entity_description.key == "GlobState":
+            raw_state = (
+                self.coordinator.data.get("GlobState")
+                or self.coordinator.data.get("GlobalState")
+                or self.coordinator.data.get("InverterState")
+                or self.coordinator.data.get("InvState")
+            )
+            if raw_state is None:
+                return "Sconosciuto"
+            try:
+                code = int(float(raw_state))
+                return GLOBAL_STATE_MAP.get(code, f"Stato {code}")
+            except (ValueError, TypeError):
+                return str(raw_state)
+
+        # 7. Stato Allarme Inverter (Dinamico)
+        if self.entity_description.key == "AlarmState":
+            raw_alarm = (
+                self.coordinator.data.get("AlarmState")
+                or self.coordinator.data.get("AlarmCode")
+                or self.coordinator.data.get("Alarm")
+                or self.coordinator.data.get("AlarmDesc")
+            )
+            if not raw_alarm or str(raw_alarm).strip() in (
+                "0",
+                "0.0",
+                "None",
+                "No Alarm",
+                "OK",
+                "null",
+            ):
+                return "Nessun Allarme"
+
+            return str(raw_alarm).strip()
+
+        # 8. Temperature e altri valori diretti
+        raw_val = self.coordinator.data.get(self.entity_description.key)
+        if raw_val is None:
+            return None
+
+        return round(float(raw_val), 1 if "Temp" in self.entity_description.key else 2)
